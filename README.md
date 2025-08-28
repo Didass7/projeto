@@ -31,7 +31,8 @@ No installation required — everything runs locally in the browser.
 ---
 
 ## 📸 Screenshots
-(Add here some screenshots of the app interface and charts after running it)
+<img width="1014" height="786" alt="imagem" src="https://github.com/user-attachments/assets/26ff6126-e28f-4a93-a506-0319520226c7" />
+
 
 ---
 
