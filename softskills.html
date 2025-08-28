@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Soft Skills Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f5f7fa;
+      margin: 30px;
+      color: #333;
+    }
+    h1 { text-align: center; color: #2c3e50; }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+      margin: 20px auto;
+      max-width: 900px;
+    }
+    select, input, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover { background: #2980b9; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #3498db; color: white; }
+    canvas { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <div style="text-align:center; margin-bottom:20px;">
+  <button onclick="setLanguage('en')">English</button>
+  <button onclick="setLanguage('pt')">Português</button>
+  </div>
+  <h1 id="title">Soft Skills Tracker</h1>
+
+  <div class="card">
+  <h3 id="addRecord">Adicionar Registo</h3>
+  <input type="text" id="username" placeholder="O teu nome">
+    <select id="skill">
+  <option value="Comunicação" data-en="Communication" data-pt="Comunicação">Comunicação</option>
+  <option value="Liderança" data-en="Leadership" data-pt="Liderança">Liderança</option>
+  <option value="Criatividade" data-en="Creativity" data-pt="Criatividade">Criatividade</option>
+  <option value="Gestão de Tempo" data-en="Time Management" data-pt="Gestão de Tempo">Gestão de Tempo</option>
+  <option value="Trabalho em Equipa" data-en="Teamwork" data-pt="Trabalho em Equipa">Trabalho em Equipa</option>
+  <option value="Resolução de Problemas" data-en="Problem Solving" data-pt="Resolução de Problemas">Resolução de Problemas</option>
+    </select>
+  <button onclick="addEntry()" id="registerBtn">Registar</button>
+  <button onclick="clearEntries()" style="background:#e74c3c;" id="clearBtn">Limpar Registos</button>
+  </div>
+
+  <div class="card">
+  <h3 id="filters">Filtros</h3>
+  <input type="text" id="filterName" placeholder="Filtrar por nome" oninput="renderTable();updateChart()">
+    <select id="filterSkill" onchange="renderTable();updateChart()">
+  <option value="" data-en="All" data-pt="Todas">Todas</option>
+  <option value="Comunicação" data-en="Communication" data-pt="Comunicação">Comunicação</option>
+  <option value="Liderança" data-en="Leadership" data-pt="Liderança">Liderança</option>
+  <option value="Criatividade" data-en="Creativity" data-pt="Criatividade">Criatividade</option>
+  <option value="Gestão de Tempo" data-en="Time Management" data-pt="Gestão de Tempo">Gestão de Tempo</option>
+  <option value="Trabalho em Equipa" data-en="Teamwork" data-pt="Trabalho em Equipa">Trabalho em Equipa</option>
+  <option value="Resolução de Problemas" data-en="Problem Solving" data-pt="Resolução de Problemas">Resolução de Problemas</option>
+    </select>
+  </div>
+
+  <div class="card">
+  <h3 id="records">Registos</h3>
+    <table id="entriesTable">
+      <thead>
+  <tr><th id="thName">Nome</th><th id="thSkill">Soft Skill</th><th id="thDate">Data</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+  <h3 id="chartTitle">Gráfico</h3>
+  <canvas id="skillsChart"></canvas>
+  <button onclick="downloadChart()" id="downloadBtn">📸 Download Gráfico</button>
+  </div>
+
+  <script>
+    const tableBody = document.querySelector("#entriesTable tbody");
+    let entries = JSON.parse(localStorage.getItem("softskills")) || [];
+    let chart;
+    let currentLang = 'pt';
+
+    const translations = {
+      en: {
+        title: "Soft Skills Tracker",
+        addRecord: "Add Record",
+        username: "Your name",
+        registerBtn: "Register",
+        clearBtn: "Clear Records",
+        filters: "Filters",
+        filterName: "Filter by name",
+        records: "Records",
+        thName: "Name",
+        thSkill: "Soft Skill",
+        thDate: "Date",
+        chartTitle: "Chart",
+        downloadBtn: "📸 Download Chart",
+        noRecords: "No records",
+        confirmClear: "Are you sure you want to delete all records?",
+        alertName: "Please enter your name.",
+        all: "All"
+      },
+      pt: {
+        title: "Soft Skills Tracker",
+        addRecord: "Adicionar Registo",
+        username: "O teu nome",
+        registerBtn: "Registar",
+        clearBtn: "Limpar Registos",
+        filters: "Filtros",
+        filterName: "Filtrar por nome",
+        records: "Registos",
+        thName: "Nome",
+        thSkill: "Soft Skill",
+        thDate: "Data",
+        chartTitle: "Gráfico",
+        downloadBtn: "📸 Download Gráfico",
+        noRecords: "Sem registos",
+        confirmClear: "Tens a certeza que queres apagar todos os registos?",
+        alertName: "Por favor insere o teu nome.",
+        all: "Todas"
+      }
+    };
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.getElementById('title').textContent = translations[lang].title;
+      document.getElementById('addRecord').textContent = translations[lang].addRecord;
+      document.getElementById('username').placeholder = translations[lang].username;
+      document.getElementById('registerBtn').textContent = translations[lang].registerBtn;
+      document.getElementById('clearBtn').textContent = translations[lang].clearBtn;
+      document.getElementById('filters').textContent = translations[lang].filters;
+      document.getElementById('filterName').placeholder = translations[lang].filterName;
+      document.getElementById('records').textContent = translations[lang].records;
+      document.getElementById('thName').textContent = translations[lang].thName;
+      document.getElementById('thSkill').textContent = translations[lang].thSkill;
+      document.getElementById('thDate').textContent = translations[lang].thDate;
+      document.getElementById('chartTitle').textContent = translations[lang].chartTitle;
+      document.getElementById('downloadBtn').textContent = translations[lang].downloadBtn;
+
+      Array.from(document.querySelectorAll('#skill option')).forEach(opt => {
+        opt.textContent = opt.getAttribute('data-' + lang);
+      });
+      Array.from(document.querySelectorAll('#filterSkill option')).forEach(opt => {
+        opt.textContent = opt.getAttribute('data-' + lang);
+      });
+      // Footer translation
+      var footerPt = document.getElementById('footer-pt');
+      var footerEn = document.getElementById('footer-en');
+      if (footerPt && footerEn) {
+        footerPt.style.display = lang === 'pt' ? '' : 'none';
+        footerEn.style.display = lang === 'en' ? '' : 'none';
+      }
+      renderTable();
+      updateChart();
+    }
+
+    function getFilteredEntries() {
+      const filterName = document.getElementById("filterName").value.toLowerCase();
+      const filterSkill = document.getElementById("filterSkill").value;
+      return entries.filter(e =>
+        (!filterName || e.name.toLowerCase().includes(filterName)) &&
+        (!filterSkill || e.skill === filterSkill)
+      );
+    }
+
+    function renderTable() {
+      const filtered = getFilteredEntries();
+      tableBody.innerHTML = "";
+      if (filtered.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="3" style="text-align:center;">${translations[currentLang].noRecords}</td>`;
+        tableBody.appendChild(row);
+        return;
+      }
+      filtered.forEach(entry => {
+        // Translate skill name
+        let skillTranslated = entry.skill;
+        const skillOption = Array.from(document.querySelectorAll('#skill option')).find(opt => opt.value === entry.skill);
+        if (skillOption) {
+          skillTranslated = skillOption.getAttribute('data-' + currentLang);
+        }
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${entry.name}</td><td>${skillTranslated}</td><td>${entry.date}</td>`;
+        tableBody.appendChild(row);
+      });
+    }
+
+    function addEntry() {
+      const name = document.getElementById("username").value.trim();
+      const skill = document.getElementById("skill").value;
+      if (!name) {
+        alert(translations[currentLang].alertName);
+        return;
+      }
+      const date = new Date().toLocaleString();
+      const newEntry = { name, skill, date };
+      entries.push(newEntry);
+      localStorage.setItem("softskills", JSON.stringify(entries));
+      renderTable();
+      updateChart();
+      document.getElementById("username").value = "";
+    }
+
+    function clearEntries() {
+  if (confirm(translations[currentLang].confirmClear)) {
+        entries = [];
+        localStorage.removeItem("softskills");
+        renderTable();
+        updateChart();
+      }
+    }
+
+    function updateChart() {
+      const filtered = getFilteredEntries();
+      const counts = {};
+      filtered.forEach(e => {
+        // Translate skill name for chart
+        let skillTranslated = e.skill;
+        const skillOption = Array.from(document.querySelectorAll('#skill option')).find(opt => opt.value === e.skill);
+        if (skillOption) {
+          skillTranslated = skillOption.getAttribute('data-' + currentLang);
+        }
+        counts[skillTranslated] = (counts[skillTranslated] || 0) + 1;
+      });
+
+      const data = {
+        labels: Object.keys(counts),
+        datasets: [{
+          label: currentLang === 'en' ? "Number of Records" : "Número de Registos",
+          data: Object.values(counts),
+          backgroundColor: ["#3498db","#e67e22","#9b59b6","#2ecc71","#f1c40f","#e74c3c"]
+        }]
+      };
+
+      const ctx = document.getElementById("skillsChart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "bar",
+        data,
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function downloadChart() {
+      if (!chart) return;
+      const a = document.createElement("a");
+      a.href = chart.toBase64Image();
+      a.download = "grafico_softskills.png";
+      a.click();
+    }
+
+  renderTable();
+  updateChart();
+  setLanguage(currentLang);
+  </script>
+  <footer style="text-align:center; margin-top:40px; color:#555; font-size:1rem;">
+  <span id="footer-pt">Página criada por André Ignat, Diogo Inácio, Diogo Oliveira, João Resina e Tiago Alves.<br>
+  Desenvolvido num Hackathon em 2025 para o curso "Soft Skills for Deep Tech. Hackathon".</span>
+  <span id="footer-en" style="display:none;">Page created by André Ignat, Diogo Inácio, Diogo Oliveira, João Resina and Tiago Alves.<br>
+  Developed at a Hackathon in 2025 for the course "Soft Skills for Deep Tech. Hackathon".</span>
+  </footer>
+</body>
+</html>
